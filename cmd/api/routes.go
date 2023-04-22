@@ -10,7 +10,7 @@ import (
 func (app *application) routes() http.Handler {
 
 	router := httprouter.New()
-
+	//middlewareXX99
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
 
