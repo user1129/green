@@ -123,7 +123,7 @@ func TestCreateMovie(t *testing.T) {
 			inputData := struct {
 				Title   string   `json:"title"`
 				Year    int32    `json:"year"`
-				Runtime string    `json:"runtime"`
+				Runtime string   `json:"runtime"`
 				Genres  []string `json:"genres"`
 			}{
 				Title:   tt.Title,
@@ -133,21 +133,20 @@ func TestCreateMovie(t *testing.T) {
 			}
 
 			b, err := json.Marshal(&inputData)
-   			 if err != nil {
-      		  t.Fatal("wrong input data");
-    		}
+			if err != nil {
+				t.Fatal("wrong input data")
+			}
 			if tt.name == "test for wrong input" {
 				b = append(b, 'a')
 			}
 
-			code, _, _ := ts.postForm(t, "/v1/movies", b)
-
+			code, _, body := ts.postForm(t, "/v1/movies", b)
+			t.Log(body)
 			assert.Equal(t, code, tt.wantCode)
 
 		})
 	}
 }
-
 
 func TestDeleteMovie(t *testing.T) {
 	app := newTestApplication(t)
@@ -166,12 +165,16 @@ func TestDeleteMovie(t *testing.T) {
 			wantCode: http.StatusOK,
 		},
 		{
+			name:     "Negative ID",
+			urlPath:  "/v1/movies/-1",
+			wantCode: http.StatusNotFound,
+		},
+		{
 			name:     "Non-existent ID",
 			urlPath:  "/v1/movies/2",
 			wantCode: http.StatusNotFound,
 		},
 	}
-
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -187,4 +190,154 @@ func TestDeleteMovie(t *testing.T) {
 		})
 	}
 
+}
+
+func TestListMovies(t *testing.T) {
+	app := newTestApplication(t)
+	ts := newTestServer(t, app.routesTest())
+	defer ts.Close()
+
+	tests := []struct {
+		name     string
+		urlPath  string
+		wantCode int
+		wantBody string
+	}{
+		{
+			name:     "Valid ID",
+			urlPath:  "/v1/movies?title=the+club",
+			wantCode: http.StatusOK,
+		},
+		{
+			name:     "Incorrect page number type",
+			urlPath:  "/v1/movies?page=q",
+			wantCode: http.StatusUnprocessableEntity,
+		},
+		{
+			name:     "Invalid sort value",
+			urlPath:  "/v1/movies?sort=+runtinme",
+			wantCode: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			code, _, body := ts.get(t, tt.urlPath)
+
+			assert.Equal(t, code, tt.wantCode)
+
+			if tt.wantBody != "" {
+				assert.StringContains(t, body, tt.wantBody)
+			}
+
+		})
+	}
+}
+
+func TestUpdateMovie(t *testing.T) {
+	app := newTestApplication(t)
+	ts := newTestServer(t, app.routesTest())
+	defer ts.Close()
+
+	const (
+		validTitle   = "Test Title"
+		validYear    = 2021
+		validRuntime = "105 mins"
+	)
+
+	validGenres := []string{"comedy", "drama"}
+
+	tests := []struct {
+		name     string
+		Title    string
+		Year     int32
+		Runtime  string
+		Genres   []string
+		urlPath  string
+		wantCode int
+	}{
+		{
+			name:     "Valid submission",
+			Title:    validTitle,
+			Year:     validYear,
+			Runtime:  validRuntime,
+			Genres:   validGenres,
+			urlPath:  "/v1/movies/1",
+			wantCode: http.StatusOK,
+		},
+		{
+			name:     "Non-existent ID",
+			Title:    validTitle,
+			Year:     validYear,
+			Runtime:  validRuntime,
+			Genres:   validGenres,
+			urlPath:  "/v1/movies/2",
+			wantCode: http.StatusNotFound,
+		},
+		{
+			name:     "Negative ID",
+			Title:    validTitle,
+			Year:     validYear,
+			Runtime:  validRuntime,
+			Genres:   validGenres,
+			urlPath:  "/v1/movies/-1",
+			wantCode: http.StatusNotFound,
+		},
+		{
+			name:     "Empty Title",
+			Title:    "",
+			Year:     validYear,
+			Runtime:  validRuntime,
+			Genres:   validGenres,
+			urlPath:  "/v1/movies/1",
+			wantCode: http.StatusUnprocessableEntity,
+		},
+		{
+			name:     "year < 1888",
+			Title:    validTitle,
+			Year:     1500,
+			Runtime:  validRuntime,
+			Genres:   validGenres,
+			urlPath:  "/v1/movies/1",
+			wantCode: http.StatusUnprocessableEntity,
+		},
+		{
+			name:     "test for wrong input",
+			Title:    validTitle,
+			Year:     validYear,
+			Runtime:  validRuntime,
+			Genres:   validGenres,
+			urlPath:  "/v1/movies/1",
+			wantCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inputData := struct {
+				Title   string   `json:"title"`
+				Year    int32    `json:"year"`
+				Runtime string   `json:"runtime"`
+				Genres  []string `json:"genres"`
+			}{
+				Title:   tt.Title,
+				Year:    tt.Year,
+				Runtime: tt.Runtime,
+				Genres:  tt.Genres,
+			}
+
+			b, err := json.Marshal(&inputData)
+			if err != nil {
+				t.Fatal("wrong input data")
+			}
+			if tt.name == "test for wrong input" {
+				b = append(b, 'a')
+			}
+
+			code, _, _ := ts.patchForm(t, tt.urlPath, b)
+
+			assert.Equal(t, code, tt.wantCode)
+		})
+	}
 }
