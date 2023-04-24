@@ -14,9 +14,9 @@ func TestRegisterUser(t *testing.T) {
 	defer ts.Close()
 
 	const (
-		validName     = "Amanzhol Bakhtiyar"
-		validEmail    = "example@gmail.com"
-		validPassword = "QWERTY549"
+		validName     = "eldos"
+		validEmail    = "eldos@gmail.com"
+		validPassword = "eldos"
 	)
 
 	tests := []struct {
@@ -43,7 +43,7 @@ func TestRegisterUser(t *testing.T) {
 		{
 			Topic:    "Duplicate email",
 			Name:     validName,
-			Email:    "baha@gmail.com",
+			Email:    "eldos@gmail.com",
 			Password: validPassword,
 			wantCode: http.StatusUnprocessableEntity,
 		},
